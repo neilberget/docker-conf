@@ -1,10 +1,6 @@
 #!/bin/bash
 
-# TODO: ls ./*/Dockerfile
-# Loop through all Dockerfiles and build dependency graph
-# Looking at the FROM line in each file
-
-# set -e
+set -e
 # set -x
 
 (
@@ -14,18 +10,21 @@
   docker run -d --name conf-base conf-base true
 )
 
-#for dir in ./*/
-for dir in `find . -maxdepth 1 -mindepth 1 -type d -not -name 'base'`
+# Get list of folders in proper dependency order
+dirs=`bundle exec ruby graph.rb`
+
+for dir in $dirs
 do
-  echo $dir
-  tag=conf-${dir##*/}
-  (
-    echo $dir
-    cd $dir
-    docker build -t $tag .
-    docker rm $tag || true
-    docker run -d --name $tag $tag true
-  )
+  if [ -d "$dir" ]; then
+    tag=conf-$dir
+    (
+      echo $dir
+      cd $dir
+      docker build -t $tag .
+      docker rm $tag || true
+      docker run -d --name $tag $tag true
+    )
+  fi
 done
 
 
